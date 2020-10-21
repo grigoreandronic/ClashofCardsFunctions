@@ -15,10 +15,14 @@ exports.updateGame = functions.firestore
         var turn = newValue.turn;
         var uid1move;
         var uid2move;
-        var uid1nset = 0;
-        var uid2nset = 0;
-        var uid1nturn = 0;
-        var uid2nturn = 0;
+        var uid1nset = parseFloat(newValue.uid1nset);
+        var uid2nset = parseFloat(newValue.uid2nset);
+        var uid1nturn = parseFloat(newValue.uid1nturn);
+        var uid2nturn = parseFloat(newValue.uid2nturn);
+        var uid1decksize = parseFloat(newValue.uid1decksize);
+        var uid2decksize = parseFloat(newValue.uid2decksize);
+        var valueselected = newValue.valueselected;
+        var operation = newValue.operation;
 
         switch (confvalue1) {
             case "uid1value1":
@@ -75,40 +79,205 @@ exports.updateGame = functions.firestore
                 break;
         }
 
-        var operation = newValue.operation;
-        // username has been changed
-        const snapshot = await admin.firestore()
-            .collection("GameRoom")
-            .where('uid1', '==', newValue.uid1)
-            .where('uid2', '==', newValue.uid2)
-            .where('deck', '==', newValue.deck)
-            .where('status', '==', newValue.status)
-            .get();
-
-
         if ((operation.localeCompare("greater")) === 0) {
             console.log("greater")
             if (newValue.turn.localeCompare("uid1") === 0) {
                 console.log("uid1")
-                if (val1 > val2) {
-                    if (parseFloat(newValue.uid2decksize) === 1 && parseFloat(newValue.uid1nset) === 2) {
+                if (val1 >= val2) {
+                    if (uid2decksize === 1 && uid1nset === 2) {
                         //Vittoria game
                         console.log("Vittoria game")
                         uid1move = "gamewin";
                         uid2move = "gamelost"
-                    } else if (parseFloat(newValue.uid2decksize) === 1 && parseFloat(newValue.uid1nset) < 2) {
+                    } else if (uid2decksize === 1 && uid1nset < 2) {
                         //Vittoria set
                         console.log("Vittoria set")
+                        uid1nset++;
+                        uid1decksize = decksize
+                        uid2decksize = decksize
+                        uid1nturn = 0
+                        uid1move = "setwin";
+                        uid2move = "setlost";
+                        turn = "uid2"
+                    } else if (uid2decksize > 1 && uid1nturn < 2) {
+                        //Vittoria turno
+                        console.log("Vittoria turno")
+                        uid1nturn++;
+                        uid1move = "turnwin";
+                        uid2move = "turnlost";
+                        uid2decksize--;
+                        turn = "uid1";
+                    } else {
+                        console.log("Vittoria turno con switch")
+                        uid1nturn = 0;
+                        uid2nturn = 0;
+                        uid1move = "turnwinswitch";
+                        uid2move = "turnlostswitch";
+                        uid2decksize--;
+                        turn = "uid2";
 
-                        uid1nset = newValue.uid1nset + 1
+                    }
+
+                    return change.after.ref.set({
+                        uid1move: uid1move,
+                        uid2move: uid2move,
+                        operation: '',
+                        turn: turn,
+                        uid1nturn: uid1nturn,
+                        uid2nturn: uid2nturn,
+                        uid1nset: uid1nset,
+                        uid2nset: uid2nset,
+                        valueselected: ' ',
+                    }, { merge: true });
+                }
+                if (val1 < val2) {
+                    if (uid1decksize === 1 && newValue.uid2nset === 2) {
+                        // game perso
+                        console.log("Vittoria game avversario")
+                        uid1move = "gamelost";
+                        uid2move = "gamewin"
+                    } else if (uid1decksize === 1 && uid2nset < 2) {
+                        //set perso
+                        console.log("Vittoria set avversario")
+                        uid1nturn = 0
+                        uid2nturn = 0
+                        uid2nset = (uid2nset) + 1
+                        uid2move = "setwin";
+                        uid1move = "setlost";
+                        turn = "uid1"
+
+                    } else {
+                        // turno perso
+                        console.log("Vittoria turno avversario")
+                        uid2nturn = (uid2nturn) + 1
+                        uid2move = "turnwin";
+                        uid1move = "turnlost";
+                        turn = "uid2"
+                    }
+
+                    return change.after.ref.set({
+                        uid1move: uid1move,
+                        uid2move: uid2move,
+                        operation: '',
+                        turn: turn,
+                        uid1nturn: uid1nturn,
+                        uid2nturn: uid2nturn,
+                        uid1nset: uid1nset,
+                        uid2nset: uid2nset,
+                        valueselected: ' ',
+                    }, { merge: true });
+                }
+            } else if (newValue.turn.localeCompare("uid2") === 0) {
+                console.log("uid2")
+                if (val1 >= val2) {
+                    if (uid1decksize === 1 && uid2nset === 2) {
+                        //Vittoria game
+                        console.log("Vittoria game")
+                        uid2move = "gamewin";
+                        uid1move = "gamelost"
+                    } else if (uid1decksize === 1 && uid2nset < 2) {
+                        //Vittoria set
+                        console.log("Vittoria set")
+                        uid2nset++;
+                        uid2decksize = decksize
+                        uid1decksize = decksize
+                        uid2nturn = 0
+                        uid2move = "setwin";
+                        uid1move = "setlost";
+                        turn = "uid1"
+                    } else if (uid1decksize > 1 && uid2nturn < 2) {
+                        //Vittoria turno
+                        console.log("Vittoria turno")
+                        uid2nturn++;
+                        uid2move = "turnwin";
+                        uid1move = "turnlost";
+                        uid1decksize--;
+                        turn = "uid2";
+                    } else {
+                        console.log("Vittoria turno con switch")
+                        uid1nturn = 0;
+                        uid2nturn = 0;
+                        uid2move = "turnwinswitch";
+                        uid1move = "turnlostswitch";
+                        uid1decksize--;
+                        turn = "uid1";
+
+                    }
+
+                    return change.after.ref.set({
+                        uid1move: uid1move,
+                        uid2move: uid2move,
+                        operation: '',
+                        turn: turn,
+                        uid1nturn: uid1nturn,
+                        uid2nturn: uid2nturn,
+                        uid1nset: uid1nset,
+                        uid2nset: uid2nset,
+                        valueselected: ' ',
+                    }, { merge: true });
+                }
+                if (val1 < val2) {
+                    if (uid2decksize === 1 && newValue.uid1nset === 2) {
+                        // game perso
+                        console.log("Vittoria game avversario")
+                        uid2move = "gamelost";
+                        uid1move = "gamewin"
+                    } else if (uid1decksize === 1 && uid2nset < 2) {
+                        //set perso
+                        console.log("Vittoria set avversario")
+                        uid2nturn = 0
+                        uid1nturn = 0
+                        uid1nset = (uid2nset) + 1
                         uid1move = "setwin";
                         uid2move = "setlost";
                         turn = "uid2"
 
-                    } else if (parseFloat(newValue.uid2decksize) > 1 && parseFloat(newValue.uid1nturn) < 2) {
+                    } else {
+                        // turno perso
+                        console.log("Vittoria turno avversario")
+                        uid1nturn = (uid1nturn) + 1
+                        uid1move = "turnwin";
+                        uid2move = "turnlost";
+                        turn = "uid1"
+                    }
+
+                    return change.after.ref.set({
+                        uid1move: uid1move,
+                        uid2move: uid2move,
+                        operation: '',
+                        turn: turn,
+                        uid1nturn: uid1nturn,
+                        uid2nturn: uid2nturn,
+                        uid1nset: uid1nset,
+                        uid2nset: uid2nset,
+                        valueselected: ' ',
+                    }, { merge: true });
+                }
+            }
+        }
+        if ((operation.localeCompare("lower")) === 0) {
+            console.log("lower")
+            if (newValue.turn.localeCompare("uid1") === 0) {
+                console.log("uid1")
+                if (val1 <= val2) {
+                    if ((uid2decksize) === 1 && (uid1nset) === 2) {
+                        //Vittoria game
+                        console.log("Vittoria game")
+                        uid1move = "gamewin";
+                        uid2move = "gamelost"
+                    } else if ((uid2decksize) === 1 && (uid1nset) < 2) {
+                        //Vittoria set
+                        console.log("Vittoria set")
+
+                        uid1nset = (uid1nset) + 1
+                        uid1move = "setwin";
+                        uid2move = "setlost";
+                        turn = "uid2"
+
+                    } else if ((uid2decksize) > 1 && (uid1nturn) < 2) {
                         //Vittoria turno
                         console.log("Vittoria turno")
-                        uid1nturn = newValue.uid1nturn + 1
+                        uid1nturn = (uid1nturn) + 1
                         uid1move = "turnwin";
                         uid2move = "turnlost";
                         turn = "uid1"
@@ -134,103 +303,124 @@ exports.updateGame = functions.firestore
                         valueselected: ' ',
                     }, { merge: true });
                 }
-                if (val1 < val2) {
-                    let updatePromises = [];
-                    snapshot.forEach(doc => {
-                        updatePromises.push(
-                            admin.firestore()
-                            .collection('GameRoom')
-                            .doc(doc.id).update({ uid1move: "turnlost" })
-                            .update({ uid1nturn: "0" }));
-                    });
-
-                    await Promise.all(updatePromises);
-                }
-            } else if (newValue.turn.localeCompare("uid2") === 0) {
                 if (val1 > val2) {
-                    if (parseFloat(newValue.uid1decksize) === 1 && parseFloat(newValue.uid2nset) === 2) {
-                        //Vittoria game
-                        uid2move = "gamewin";
-                        uid1move = "gamelost"
-                    } else if (parseFloat(newValue.uid1decksize) === 1 && parseFloat(newValue.uid2nset) < 2) {
-                        //Vittoria set
-                        uid2nset = uid2nset++
-                            uid2move = "setwin";
+                    if ((uid1decksize) === 1 && (uid2nset) === 2) {
+                        // game perso
+                        console.log("Vittoria game avversario")
+                        uid1move = "gamelost";
+                        uid2move = "gamewin"
+                    } else if ((uid1decksize) === 1 && (uid2nset) < 2) {
+                        //set perso
+                        console.log("Vittoria set avversario")
+
+                        uid2nset = (uid2nset) + 1
+                        uid2move = "setwin";
                         uid1move = "setlost";
-                    } else if (parseFloat(newValue.uid1decksize) > 1 && parseFloat(newValue.uid2nturn) < 2) {
-                        //Vittoria turno
-                        uid2nturn = uid2nturn++
-                            uid2move = "turnwin";
-                        uid1move = "turnlost";
+                        turn = "uid2"
+
                     } else {
-                        uid2nturn = 0
-                        uid2move = "turnwinswitch";
-                        uid1move = "turnlostswitch";
+                        // turno perso
+                        console.log("Vittoria turno avversario")
+                        uid2nturn = (uid2nturn) + 1
+                        uid2move = "turnwin";
+                        uid1move = "turnlost";
+                        turn = "uid1"
                     }
 
-
-                    let updatePromises = [];
-                    snapshot.forEach(doc => {
-                        updatePromises.push(
-                            admin.firestore()
-                            .collection('GameRoom')
-                            .doc(doc.id).update({ uid1move: move })
-                            .update({ uid1nturn: uid1nturn })
-                        );
-                    });
-
-                    await Promise.all(updatePromises);
-
+                    return change.after.ref.set({
+                        uid1move: uid1move,
+                        uid2move: uid2move,
+                        operation: '',
+                        turn: turn,
+                        uid1nturn: uid1nturn,
+                        uid2nturn: uid2nturn,
+                        uid1nset: uid1nset,
+                        uid2nset: uid2nset,
+                        valueselected: ' ',
+                    }, { merge: true });
                 }
-                if (val1 < val2) {
-                    let updatePromises = [];
-                    snapshot.forEach(doc => {
-                        updatePromises.push(
-                            admin.firestore()
-                            .collection('GameRoom')
-                            .doc(doc.id).update({ uid2move: 'turnlost' })
-                            .update({ uid2nturn: '0' }));
-                    });
+            } else if (newValue.turn.localeCompare("uid2") === 0) {
+                console.log("uid1")
+                if (val1 <= val2) {
+                    if ((uid1decksize) === 1 && (uid2nset) === 2) {
+                        //Vittoria game
+                        console.log("Vittoria game")
+                        uid2move = "gamewin";
+                        uid1move = "gamelost"
+                    } else if ((uid1decksize) === 1 && (uid2nset) < 2) {
+                        //Vittoria set
+                        console.log("Vittoria set")
 
-                    await Promise.all(updatePromises);
+                        uid2nset = (uid1nset) + 1
+                        uid2move = "setwin";
+                        uid1move = "setlost";
+                        turn = "uid1"
+
+                    } else if ((uid1decksize) > 1 && (uid2nturn) < 2) {
+                        //Vittoria turno
+                        console.log("Vittoria turno")
+                        uid2nturn = (uid1nturn) + 1
+                        uid2move = "turnwin";
+                        uid1move = "turnlost";
+                        turn = "uid2"
+                    } else {
+                        console.log("Vittoria turno con switch")
+                        uid2nturn = 0
+                        uid1nturn = 0
+                        uid2move = "turnwinswitch";
+                        uid1move = "turnlostswitch";
+                        turn = "uid1"
+
+                    }
+
+                    return change.after.ref.set({
+                        uid1move: uid1move,
+                        uid2move: uid2move,
+                        operation: '',
+                        turn: turn,
+                        uid1nturn: uid1nturn,
+                        uid2nturn: uid2nturn,
+                        uid1nset: uid1nset,
+                        uid2nset: uid2nset,
+                        valueselected: ' ',
+                    }, { merge: true });
                 }
+                if (val1 > val2) {
+                    if ((uid2decksize) === 1 && (uid1nset) === 2) {
+                        // game perso
+                        console.log("Vittoria game avversario")
+                        uid2move = "gamelost";
+                        uid1move = "gamewin"
+                    } else if ((uid2decksize) === 1 && (uid1nset) < 2) {
+                        //set perso
+                        console.log("Vittoria set avversario")
 
-            } else {
-                return 0;
-            }
-        }
-        if ((operation.localeCompare("lower")) === 0) {
-            if (val1 < val2) {
-                console.log("lower")
-                const snapshot = await admin.firestore()
-                    .collection("GameRoom")
-                    .where('uid1', '==', newValue.uid1)
-                    .where('uid2', '==', newValue.uid2)
-                    .where('deck', '==', newValue.deck)
-                    .where('status', '==', newValue.status)
-                    .get();
-                let updatePromises = [];
-                snapshot.forEach(doc => {
-                    updatePromises.push(
-                        admin.firestore()
-                        .collection('GameRoom')
-                        .doc(doc.id).update({ uid1move: 'turnwin' }));
-                });
+                        uid1nset = (uid1nset) + 1
+                        uid1move = "setwin";
+                        uid2move = "setlost";
+                        turn = "uid1"
 
-                await Promise.all(updatePromises);
+                    } else {
+                        // turno perso
+                        console.log("Vittoria turno avversario")
+                        uid1nturn = (uid1nturn) + 1
+                        uid1move = "turnwin";
+                        uid2move = "turnlost";
+                        turn = "uid2"
+                    }
 
-
-            }
-            if (val1 > val2) {
-                let updatePromises = [];
-                snapshot.forEach(doc => {
-                    updatePromises.push(
-                        admin.firestore()
-                        .collection('GameRoom')
-                        .doc(doc.id).update({ uid1move: 'turnlost' }));
-                });
-
-                await Promise.all(updatePromises);
+                    return change.after.ref.set({
+                        uid1move: uid1move,
+                        uid2move: uid2move,
+                        operation: '',
+                        turn: turn,
+                        uid1nturn: uid1nturn,
+                        uid2nturn: uid2nturn,
+                        uid1nset: uid1nset,
+                        uid2nset: uid2nset,
+                        valueselected: ' ',
+                    }, { merge: true });
+                }
             }
         }
         return 0;
